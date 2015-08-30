@@ -22,6 +22,8 @@
     "url": "https://github.com/daru23/my_message_broker/issues"
   },
   "dependencies": {
-    "redis": "~0.12.1"
+    "redis": "~0.12.1",
+    "joi": "~6.6.1",
+    "assert": "~1.3.0"
   }
 }
