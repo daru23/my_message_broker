@@ -14,48 +14,38 @@ var assert = require("assert");
 var msgModule = require('../messages.js');
 
 /* Global variable for tests */
-var msgGlobal = msgModule.create('BROADCAST', 'testService', process.pid);
+var msgGlobal = msgModule.create('testService', process.pid);
 
 describe('Messages', function() {
     describe('create message', function () {
         it('create a message and return object', function () {
-            assert.deepEqual(msgGlobal,msgModule.create('BROADCAST', 'testService', process.pid));
-        });
-        //TYPE ERROR
-        it('Wrong type and return error', function () {
-            assert.equal('"type" must be a string',(msgModule.create(0, "testService", process.pid)).details[0].message);
-        });
-        it('Wrong type and return error', function () {
-            assert.equal('"type" must be a string',(msgModule.create([], "testService", process.pid)).details[0].message);
-        });
-        it('Wrong type and return error', function () {
-            assert.equal('"type" must be a string',(msgModule.create({}, "testService", process.pid)).details[0].message);
+            assert.deepEqual(msgGlobal,msgModule.create('testService', process.pid));
         });
         //SERVICEID
         it('Wrong servieID return error', function () {
-            assert.equal('"serviceID" must be a string',(msgModule.create('BROADCAST', 0, process.pid)).details[0].message);
+            assert.equal('"serviceID" must be a string',(msgModule.create(0, process.pid)).details[0].message);
         });
         it('Wrong servieID return error', function () {
-            assert.equal('"serviceID" must be a string',(msgModule.create('BROADCAST', {}, process.pid)).details[0].message);
+            assert.equal('"serviceID" must be a string',(msgModule.create({}, process.pid)).details[0].message);
         });
         it('Wrong servieID return error', function () {
-            assert.equal('"serviceID" must be a string',(msgModule.create('BROADCAST', [], process.pid)).details[0].message);
+            assert.equal('"serviceID" must be a string',(msgModule.create([], process.pid)).details[0].message);
         });
         //PID
         it('Wrong pid return error', function () {
-            assert.equal('"msgpid" must be a number',(msgModule.create('BROADCAST', "testService", "")).details[0].message);
+            assert.equal('"msgpid" must be a number',(msgModule.create("testService", "")).details[0].message);
         });
         it('Wrong pid return error', function () {
-            assert.equal('"msgpid" must be a number',(msgModule.create('BROADCAST', "testService", {})).details[0].message);
+            assert.equal('"msgpid" must be a number',(msgModule.create("testService", {})).details[0].message);
         });
         it('Wrong pid return error', function () {
-            assert.equal('"msgpid" must be a number',(msgModule.create('BROADCAST', "testService", [])).details[0].message);
+            assert.equal('"msgpid" must be a number',(msgModule.create("testService", [])).details[0].message);
         });
     });
     describe('setData message', function () {
         it('set data to a message and return object', function () {
             msgGlobal.data = {"value" : 1};
-            var testMsg =msgModule.create('BROADCAST', 'testService', process.pid);
+            var testMsg =msgModule.create('testService', process.pid);
             assert.deepEqual(msgGlobal,msgModule.setData(testMsg, {"value": 1}));
             msgGlobal.data = {};
         });
@@ -69,7 +59,7 @@ describe('Messages', function() {
     describe('setRequest message', function () {
         it('set request to a message and return object', function () {
             msgGlobal.request = {"service" : "math", "function" : "multiply"};
-            var testMsg =msgModule.create('BROADCAST', 'testService', process.pid);
+            var testMsg =msgModule.create('testService', process.pid);
             assert.deepEqual(msgGlobal,msgModule.setRequest(testMsg,{"service" : "math", "function" : "multiply"}));
         });
         //ERROR
@@ -92,5 +82,16 @@ describe('Messages', function() {
         it('verify a message and return object', function () {
             assert.deepEqual(msgGlobal, msgModule.verify(msgGlobal));
         });
-    })
+    });
+    //TYPE ERROR
+    //it('Wrong type and return error', function () {
+    //    assert.equal('"type" must be a string',(msgModule.create(0, "testService", process.pid)).details[0].message);
+    //});
+    //it('Wrong type and return error', function () {
+    //    assert.equal('"type" must be a string',(msgModule.create([], "testService", process.pid)).details[0].message);
+    //});
+    //it('Wrong type and return error', function () {
+    //    assert.equal('"type" must be a string',(msgModule.create({}, "testService", process.pid)).details[0].message);
+    //});
+
 });

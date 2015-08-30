@@ -42,12 +42,10 @@ var msgTemplate = Joi.object().keys({
 
 
 var service = {
-    create:function(type, serviceID, pid) {
+    create:function(serviceID, pid) {
         // Create a message using the template
-        //  A message always is create with ack = 0
-        var msg = {};
+        //  A message always is create with ack = 0 and type NORMAL
         var message = emptyMsg;
-        message.type = type;
         message.serviceID = serviceID;
         message.msgpid = pid;
         message.msgID = (crypto.createHash('sha1').digest('hex')).toString();//crypto.createHash('sha1');
@@ -62,22 +60,30 @@ var service = {
     },
     setData:function(message, data){
         // Parse a message and see if everything went ok, return the data
+        message.data = data;
         var validation = Joi.validate(message,msgTemplate);
         if (validation.error == null && validation.value != null){
-            msg = validation.value;
-            msg.data= data;
-            return msg;
+            return validation.value;
         }else{
             return validation.error;
         }  // err === null -> valid
     },
     setRequest:function(message, request){
         // Parse a message and see if everything went ok, return the data
+        message.request = request;
         var validation = Joi.validate(message,msgTemplate);
         if (validation.error == null && validation.value != null){
-            msg = validation.value;
-            msg.request = request;
-            return msg;
+            return validation.value;
+        }else{
+            return validation.error;
+        }  // err === null -> valid
+    },
+    setType:function(message, type){
+        // Parse a message and see if everything went ok, return the data
+        message.type = type;
+        var validation = Joi.validate(message,msgTemplate);
+        if (validation.error == null && validation.value != null){
+            return validation.value;
         }else{
             return validation.error;
         }  // err === null -> valid
