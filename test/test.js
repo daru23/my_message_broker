@@ -75,12 +75,22 @@ describe('Messages', function() {
         //ERROR
     });
     describe('getData message', function () {
-
+        it('get data to a message and return object', function () {
+            msgGlobal.data = {"value" : 1};
+            assert.deepEqual({"value" : 1},msgModule.getData(msgGlobal));
+            msgGlobal.data = {};
+        });
     });
     describe('getRequest message', function () {
-
+        it('get request to a message and return object', function () {
+            msgGlobal.request = {"service" : "math", "function" : "multiply"};
+            assert.deepEqual({"service" : "math", "function" : "multiply"},msgModule.getRequest(msgGlobal));
+            msgGlobal.request = {};
+        });
     });
     describe('verify message', function () {
-
+        it('verify a message and return object', function () {
+            assert.deepEqual(msgGlobal, msgModule.verify(msgGlobal));
+        });
     })
 });
