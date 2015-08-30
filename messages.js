@@ -111,7 +111,3 @@ var service = {
 };
 
 module.exports = service;
-
-var msgGlobal = service.create(0, 'testService', process.pid);
-
-console.log(msgGlobal)

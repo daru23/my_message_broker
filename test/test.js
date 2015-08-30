@@ -57,10 +57,22 @@ describe('Messages', function() {
             msgGlobal.data = {"value" : 1};
             var testMsg =msgModule.create('BROADCAST', 'testService', process.pid);
             assert.deepEqual(msgGlobal,msgModule.setData(testMsg, {"value": 1}));
+            msgGlobal.data = {};
         });
+        //ERROR
+        //it('Wrong data return error', function () {
+        //    msgGlobal.data = {"value" : 1};
+        //    var testMsg =msgModule.create('BROADCAST', 'testService', process.pid);
+        //    assert.deepEqual(msgGlobal,msgModule.setData(testMsg, ""));
+        //});
     });
     describe('setRequest message', function () {
-
+        it('set request to a message and return object', function () {
+            msgGlobal.request = {"service" : "math", "function" : "multiply"};
+            var testMsg =msgModule.create('BROADCAST', 'testService', process.pid);
+            assert.deepEqual(msgGlobal,msgModule.setRequest(testMsg,{"service" : "math", "function" : "multiply"}));
+        });
+        //ERROR
     });
     describe('getData message', function () {
 
@@ -72,37 +84,3 @@ describe('Messages', function() {
 
     })
 });
-
-/*
-{ [ValidationError: child "type" fails because ["type" must be a string]]
-    name: 'ValidationError',
-        details:
-    [ { message: '"type" must be a string',
-        path: 'type',
-        type: 'string.base',
-        context: [Object] } ],
-        _object:
-    { ack: 0,
-        type: 0,
-        msgpid: 9380,
-        msgID: 'da39a3ee5e6b4b0d3255bfef95601890afd80709',
-        timestamp: 1440957662,
-        serviceID: 'testService',
-        respondChannel: '',
-        request: { service: '', function: '' },
-        trackingChain: [],
-            data: {},
-        error: { errorID: 0, message: '' } },
-    annotate: [Function] }
-*/
-
-
-
-//console.log(msg);
-//console.log(service.verify(msg));
-//console.log(service.getData(msg));
-//console.log(service.setData(msg, {"value": 1}));
-//console.log(service.getData(msg));
-//console.log(service.getRequest(msg));
-//console.log(service.setRequest(msg, {"service" : "math", "function" : "multiply"}));
-//console.log(service.getRequest(msg));
