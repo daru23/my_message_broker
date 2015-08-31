@@ -43,9 +43,7 @@ setTimeout(function () {
     });
 
     request = {"service" : "math", "function": "multiply"};
-    busInit.sendMessage('math', process.pid, data, request, function (answer) {
-        console.log('Answer: %j', answer)
-    })
+    busInit.sendMessage('math', process.pid, data, request, function (answer) {});
 
 
 }, 3000);
