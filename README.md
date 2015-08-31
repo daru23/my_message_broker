@@ -20,5 +20,10 @@ node math.js
 
 Wait 7 seconds for your answer
 ```
-Answer: {"value":4}
+Answer: {"value":5}
+Answer: {"value":6}
 ```
+
+#TODO
+* Ping function 
+* Several brokers working 

@@ -119,5 +119,3 @@ var service = {
 };
 
 module.exports = service;
-
-//"publish" "broker" "{\"ack\":0,\"type\":\"NORMAL\",\"msgpid\":6010,\"msgID\":\"da39a3ee5e6b4b0d3255bfef95601890afd80709\",\"timestamp\":1441052395,\"serviceID\":\"math\",\"respondChannel\":\"mathPrivate\",\"request\":{\"service\":\"\",\"function\":\"\"},\"trackingChain\":[],\"data\":{},\"error\":{\"errorID\":0,\"message\":\"\"}}"

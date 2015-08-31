@@ -8,7 +8,7 @@ var channel;
 
 busInit.init('math', process.pid, function (assignedChannel) {
     channel = assignedChannel;
-    console.log(assignedChannel);
+    console.log('Channel assigned: %s',assignedChannel);
 });
 
 setTimeout(function () {
@@ -16,10 +16,17 @@ setTimeout(function () {
     busInit.listen(channel, function (msg) {
 
         var data = msg.data;
-        var request = msg.request;
-        //some logic to apply function
+        var functionName = msg.request.function;
 
-        var answer = sum(data.n, data.m);
+        //some logic to apply function
+        var arguments = '';
+        for(var value in data){
+            arguments+=(data[value])+',';
+        }
+
+        //delete last comma
+        arguments = arguments.substring(0, arguments.length - 1);
+        var answer = eval(functionName+'('+arguments+')') ;
 
         busInit.sendAnswer(msg, answer)
 
@@ -29,13 +36,19 @@ setTimeout(function () {
 
 setTimeout(function () {
 //for now
-    var data = {"n": 2 , "m" : 2};
+    var data = {"n": 2 , "m" : 3};
     var request = {"service" : "math", "function": "sum"};
+    busInit.sendMessage('math', process.pid, data, request, function (answer) {
+        console.log('Answer: %j', answer)
+    });
+
+    request = {"service" : "math", "function": "multiply"};
     busInit.sendMessage('math', process.pid, data, request, function (answer) {
         console.log('Answer: %j', answer)
     })
 
-}, 5000);
+
+}, 3000);
 
 function sum (n, m){
 
