@@ -51,6 +51,7 @@ listenClient.on("message", function (channel, message) {
             // check in list of service
             // send the message to the service
             //send the message to the brokerChannel as ack=1
+            //TODO check msg.request.service is not empty
             client.hgetall('services', function (error, servicesHash) {
                 if (error){
                     console.log(error);
@@ -60,9 +61,9 @@ listenClient.on("message", function (channel, message) {
                 } else if (servicesHash !== null) {
                     var check = false; // to do it just once
                     for (var service in servicesHash){
-                        if(service === msg.serviceID && check === false){ // look for a service channel
+                        if(service === msg.request.service && check === false){ // look for a service channel
                             check = true;
-                            client.hgetall(msg.serviceID, function (error, serviceReqHash) {
+                            client.hgetall(msg.request.service, function (error, serviceReqHash) {
                                 if (error){
                                     console.log(error);
                                     msg.error.code = 1; //for example this should be defined somewhere

@@ -70,13 +70,51 @@ var service = {
           try {
               msg = JSON.parse(message);
               msg = msgModule.verify(msg); // validation of the message
-              callback(message);
+              callback(msg);
           } catch (e) {
               console.log("Message is not a valid json")
           }
       });
 
       listenClient.subscribe(channel);
+  },
+  sendAnswer : function (message, data) {
+      var publishClient = redis.createClient(config.redis.port, config.redis.server);
+
+      var answer = {"value" : data};
+      var msg = msgModule.setData(message, answer);
+
+      publishClient.publish(msg.respondChannel, JSON.stringify(msg));
+  },
+  sendMessage : function (service, pid, data, request, callback){
+      var listenClient  = redis.createClient(config.redis.port, config.redis.server),
+          publishClient = redis.createClient(config.redis.port, config.redis.server);
+
+      var msg = msgModule.create(service, pid);
+      msg = msgModule.setData(msg, data);
+      msg = msgModule.setRequest(msg, request);
+      msg.respondChannel = service+'_'+pid+'_PrivateChannel';
+
+      publishClient.publish('broker', JSON.stringify(msg));
+
+      listenClient.on('error', function (error) {
+
+          console.log('listenClient error: %s', error)
+
+      });
+      // Catch redis message
+      listenClient.on("message", function (channel, message) {
+          var msg;
+          try {
+              msg = JSON.parse(message);
+              msg = msgModule.verify(msg); // validation of the message
+              callback(msg.data);
+          } catch (e) {
+              console.log("Message is not a valid json")
+          }
+      });
+
+      listenClient.subscribe(service+'_'+pid+'_PrivateChannel');
   }
 };
 
