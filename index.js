@@ -28,6 +28,8 @@ var uBrokers = {"brokers" : []},
 // { "math"   : [ { "channel" : "math_1235" , "status" : 1 }, { "channel" : "math_1234" , "status" : 0 } ]}
 // { "brokers": [ { "channel" : "broker_1235" , "status" : 1 }, { "channel" : "broker_1234" , "status" : 0 }] }
 
+/* listener for update on this variable */
+uServicesManager();
 
 // Catch redis errors
 listenClient.on('error', function (error) {
@@ -54,7 +56,8 @@ listenClient.on("message", function (channel, message) {
             client.hset('services', msg.serviceID, 1);
             client.hset(msg.serviceID, assignedChannel, 1);
             console.log('new add');
-            addService(msg.serviceID, {"channel": assignedChannel, "status" : 0}); // a service always start desactived
+            addService(msg.serviceID, {"channel": assignedChannel, "status" : 0}); // a service always start deactivated
+
         //Sending a message
         } else {
             // look for the service and forward the message
@@ -114,17 +117,20 @@ listenClient.on("message", function (channel, message) {
 
 
 /**
+ * Worker Logic
+ * I want this to listen always
  * Listen for UPDATE in the uServices object
  */
 function uServicesManager(){
 
-    var listenClient  = redis.createClient(config.redis[0].port, config.redis[0].server),
-        client  = redis.createClient(config.redis[0].port, config.redis[0].server);
+    var listenClient  = redis.createClient(config.redis.port, config.redis.server),
+        client  = redis.createClient(config.redis.port, config.redis.server);
 
     listenClient.on('message', function(channel, message) {
 
         client.get('uServices', function(err, reply) {
             uServices = JSON.parse(reply);
+            console.log('new uServices', uServices);
         });
 
     });
@@ -157,8 +163,8 @@ function uBrokersManager(){
 
 function selectService (service){
 
-    var publishClient  = redis.createClient(config.redis[0].port, config.redis[0].server),
-        client  = redis.createClient(config.redis[0].port, config.redis[0].server);
+    var publishClient  = redis.createClient(config.redis.port, config.redis.server),
+        client  = redis.createClient(config.redis.port, config.redis.server);
 
     if(typeof(uServices[service]) !== 'undefined'){
 
@@ -205,7 +211,6 @@ function addService(service, serviceObject){
             var newObjectToPush = JSON.parse('{"' + service + '": []}');//found a fancy way to make this
             serviceObject.status = 1;
             newObjectToPush[service].push(serviceObject);
-            var uServices = {};
             extend(uServices, newObjectToPush);
 
             setAndPublish('uServices',uServices,'uServicesChannel', 'UPDATE')
