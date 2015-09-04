@@ -11,6 +11,7 @@
 
 /* Required packages */
 var redis = require('redis'),
+    extend = require('extend-object'),
 /* Required private modules */
     config = require('./config.json'),
     msgModule = require('./messages.js');
@@ -19,6 +20,13 @@ var redis = require('redis'),
 var listenClient  = redis.createClient(config.redis.port, config.redis.server),
     publishClient = redis.createClient(config.redis.port, config.redis.server),
     client = redis.createClient(config.redis.port, config.redis.server);
+
+
+var uBrokers = {"brokers" : []},
+    // { "brokers": [ { "channel" : "broker_1235" , "status" : 1 }, { "channel" : "broker_1234" , "status" : 0 }] }
+    uServices = {};
+// { "math"   : [ { "channel" : "math_1235" , "status" : 1 }, { "channel" : "math_1234" , "status" : 0 } ]}
+// { "brokers": [ { "channel" : "broker_1235" , "status" : 1 }, { "channel" : "broker_1234" , "status" : 0 }] }
 
 
 // Catch redis errors
@@ -45,6 +53,8 @@ listenClient.on("message", function (channel, message) {
             publishClient.publish('brokerInitChannel', JSON.stringify(msg));
             client.hset('services', msg.serviceID, 1);
             client.hset(msg.serviceID, assignedChannel, 1);
+            console.log('new add');
+            addService(msg.serviceID, {"channel": assignedChannel, "status" : 0}); // a service always start desactived
         //Sending a message
         } else {
             // look for the service and forward the message
@@ -98,6 +108,147 @@ listenClient.on("message", function (channel, message) {
     }
 
 });
+
+/**********************************************************************************************************************/
+
+
+
+/**
+ * Listen for UPDATE in the uServices object
+ */
+function uServicesManager(){
+
+    var listenClient  = redis.createClient(config.redis[0].port, config.redis[0].server),
+        client  = redis.createClient(config.redis[0].port, config.redis[0].server);
+
+    listenClient.on('message', function(channel, message) {
+
+        client.get('uServices', function(err, reply) {
+            uServices = JSON.parse(reply);
+        });
+
+    });
+
+    listenClient.on("error", function (err) {
+        console.log("Redis listen " + name + " error " + err);
+    });
+
+    listenClient.subscribe('uServicesChannel');
+}
+
+function uBrokersManager(){
+    var listenClient  = redis.createClient(config.redis[0].port, config.redis[0].server),
+        client  = redis.createClient(config.redis[0].port, config.redis[0].server);
+
+    listenClient.on('message', function(channel, message) {
+
+        client.get('uBrokers', function(err, reply) {
+            uBrokers = JSON.parse(reply);
+        });
+
+    });
+
+    listenClient.on("error", function (err) {
+        console.log("Redis listen " + name + " error " + err);
+    });
+
+    listenClient.subscribe('uBrokersChannel');
+}
+
+function selectService (service){
+
+    var publishClient  = redis.createClient(config.redis[0].port, config.redis[0].server),
+        client  = redis.createClient(config.redis[0].port, config.redis[0].server);
+
+    if(typeof(uServices[service]) !== 'undefined'){
+
+        var uService = uServices[service], //array
+            activeuService = uService[0];
+
+        uService.shift();              //take the service out of the list
+        uService[0].status = 1;        //activate other service
+        activeuService.status = 0;     //change state to busy
+        uService.push(activeuService); // pushing the service at the end of the list
+
+        //save the new uServices
+        uServices[service] = uService;
+
+        // changing the variable on redis
+        client.set('uServices', JSON.stringify(uServices));
+        // Publish that it did an update
+        publishClient.publish('uServicesChannel', 'UPDATE');
+
+        return activeuService;
+    } else {
+
+        // return an error cause there are no services with that name
+    }
+}
+
+/**
+ * Receive a service name and an object and stored it redis
+ * @addService
+ * @param service {String}
+ * @param serviceObject {Object}
+ */
+function addService(service, serviceObject){
+
+    var client  = redis.createClient(config.redis.port, config.redis.server);
+
+
+    client.get('uServices', function(err, reply) {
+
+        if (reply == null){
+            //extend this object
+            //add a key with service name and value service channel
+            //this is the first service i should activate it
+            var newObjectToPush = JSON.parse('{"' + service + '": []}');//found a fancy way to make this
+            serviceObject.status = 1;
+            newObjectToPush[service].push(serviceObject);
+            var uServices = {};
+            extend(uServices, newObjectToPush);
+
+            setAndPublish('uServices',uServices,'uServicesChannel', 'UPDATE')
+
+        } else {
+            uServices = JSON.parse(reply);
+            if (typeof(uServices[service]) !== 'undefined') {
+
+                var uService = uServices[service];
+
+                uService.push(serviceObject);
+                //save the new uServices
+                uServices[service] = uService;
+
+                setAndPublish('uServices',uServices,'uServicesChannel', 'UPDATE')
+
+            } else {
+                //extend this object
+                //add a key with service name and value service channel
+                var stringObject = '{"' + service + '": []}'; //found a fancy way to make this
+                var objectToPush = JSON.parse(stringObject);
+                objectToPush[service].push(serviceObject);
+                extend(uServices, objectToPush);
+
+                setAndPublish('uServices',uServices,'uServicesChannel', 'UPDATE')
+
+            }
+        }
+    });
+
+}
+
+function setAndPublish(variableName, object, channel, option){
+
+    var client  = redis.createClient(config.redis.port, config.redis.server);
+    var publishClient  = redis.createClient(config.redis.port, config.redis.server);
+
+    client.set(variableName, JSON.stringify(object));
+    // Publish that it did an update
+    publishClient.publish(channel, option);
+}
+
+/**********************************************************************************************************************/
 
 listenClient.subscribe('broker');
 

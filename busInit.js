@@ -108,6 +108,7 @@ var service = {
           try {
               msg = JSON.parse(message);
               msg = msgModule.verify(msg); // validation of the message
+              //listenClient.unsubscribe();
               callback(msg.data);
           } catch (e) {
               console.log("Message is not a valid json")
