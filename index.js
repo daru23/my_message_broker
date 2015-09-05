@@ -56,7 +56,7 @@ listenClient.on("message", function (channel, message) {
             client.hset('services', msg.serviceID, 1);
             client.hset(msg.serviceID, assignedChannel, 1);
             console.log('new add');
-            addService(msg.serviceID, {"channel": assignedChannel, "status" : 0}); // a service always start deactivated
+            addService(msg.serviceID, {"channel": assignedChannel, "status" : 0}); //TODO a service always start deactivated
 
         //Sending a message
         } else {
@@ -65,6 +65,7 @@ listenClient.on("message", function (channel, message) {
             // send the message to the service
             //send the message to the brokerChannel as ack=1
             if (msg.request.service !== '' && msg.request.function !== '') {
+                selectService(msg.serviceID);
                 client.hgetall('services', function (error, servicesHash) {
                     if (error) {
                         console.log(error);
@@ -158,6 +159,7 @@ function uBrokersManager(){
         console.log("Redis listen " + name + " error " + err);
     });
 
+
     listenClient.subscribe('uBrokersChannel');
 }
 
@@ -171,6 +173,9 @@ function selectService (service){
         var uService = uServices[service], //array
             activeuService = uService[0];
 
+        console.log(uServices);
+        console.log(service);
+        console.log(activeuService);
         uService.shift();              //take the service out of the list
         uService[0].status = 1;        //activate other service
         activeuService.status = 0;     //change state to busy
