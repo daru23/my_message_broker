@@ -60,6 +60,7 @@ var service = {
   listen : function(channel, callback){
 
       var listenClient  = redis.createClient(config.redis.port, config.redis.server),
+          pingListenClient  = redis.createClient(config.redis.port, config.redis.server),
           publishClient = redis.createClient(config.redis.port, config.redis.server);
 
       listenClient.on('error', function (error) {
@@ -75,10 +76,36 @@ var service = {
               msg = msgModule.verify(msg); // validation of the message
               callback(msg);
           } catch (e) {
-              console.log("1 Message is not a valid json")
+              console.log(e);
+              console.log("Message is not a valid json")
           }
       });
 
+      pingListenClient.on('error', function (error) {
+
+          console.log('listenClient error: %s', error)
+
+      });
+      // Catch redis message
+      pingListenClient.on("message", function (channel, message) {
+          var msg;
+
+          console.log('pong');
+          try {
+              msg = JSON.parse(message);
+              msg = msgModule.verify(msg); // validation of the message
+
+              msg.request.function = 'pong';
+              msg.ack = 1;
+
+              publishClient.publish(msg.respondChannel, JSON.stringify(msg))
+          } catch (e) {
+              console.log(e);
+              console.log("Message is not a valid json")
+          }
+      });
+
+      pingListenClient.subscribe(channel+'_ping');
       listenClient.subscribe(channel);
   },
   sendAnswer : function (message, data) {

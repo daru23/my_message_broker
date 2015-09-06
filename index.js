@@ -28,6 +28,7 @@ var uBrokers = {"brokers" : []},
 
 /* listener for update on this variable */
 uServicesManager();
+pingServices ();
 
 // Catch redis errors
 listenClient.on('error', function (error) {
@@ -55,7 +56,7 @@ listenClient.on("message", function (channel, message) {
             msg.ack = 1;
             msg.respondChannel = assignedChannel;
             console.log('New service has been added %s', msg.serviceID);
-            addService(msg.serviceID, {"channel": assignedChannel, "status" : 0}); //TODO a service always start deactivated
+            addService(msg.serviceID, {"channel": assignedChannel, "status" : 0, "timestamp" : (new Date()).getTime()}); //TODO a service always start deactivated
             publishClient.publish('brokerInitChannel', JSON.stringify(msg));
 
         //Sending a message
@@ -69,7 +70,7 @@ listenClient.on("message", function (channel, message) {
                 var serviceAssgined = selectService(msg.request.service);
 
                 if (typeof(serviceAssgined) == 'string') {
-                    console.log(serviceAssgined);
+
                     msg.error.code = 2; //for example this should be defined somewhere
                     msg.error.message = serviceAssgined; //for example this should be defined somewhere
                     publishClient.publish(msg.respondChannel, JSON.stringify(msg));
@@ -84,9 +85,9 @@ listenClient.on("message", function (channel, message) {
                 publishClient.publish(msg.respondChannel, JSON.stringify(msg));
             }
 
-
         }
-    }catch(e){
+
+    } catch (e) {
         console.log(e);
         console.log("Message is not a valid json")
     }
@@ -105,7 +106,10 @@ listenClient.on("message", function (channel, message) {
 function uServicesManager(){
 
     var listenClient  = redis.createClient(config.redis.port, config.redis.server),
+        publishClient  = redis.createClient(config.redis.port, config.redis.server),
         client  = redis.createClient(config.redis.port, config.redis.server);
+
+    publishClient.publish('uServicesChannel', 'UPDATE');
 
     listenClient.on('message', function(channel, message) {
 
@@ -127,6 +131,10 @@ function uBrokersManager(){
     var listenClient  = redis.createClient(config.redis[0].port, config.redis[0].server),
         client  = redis.createClient(config.redis[0].port, config.redis[0].server);
 
+    listenClient.on("error", function (err) {
+        console.log("Redis listen " + name + " error " + err);
+    });
+
     listenClient.on('message', function(channel, message) {
 
         client.get('uBrokers', function(err, reply) {
@@ -134,11 +142,6 @@ function uBrokersManager(){
         });
 
     });
-
-    listenClient.on("error", function (err) {
-        console.log("Redis listen " + name + " error " + err);
-    });
-
 
     listenClient.subscribe('uBrokersChannel');
 }
@@ -182,6 +185,7 @@ function selectService (service){
         publishClient.publish('uServicesChannel', 'UPDATE');
 
         return activeuService;
+
     } else {
         return "not services with name "+service;
         // return an error cause there are no services with that name
@@ -248,6 +252,106 @@ function setAndPublish(variableName, object, channel, option){
     client.set(variableName, JSON.stringify(object));
     // Publish that it did an update
     publishClient.publish(channel, option);
+}
+
+function pingServices () {
+
+    var listenClient  = redis.createClient(config.redis.port, config.redis.server);
+    var client  = redis.createClient(config.redis.port, config.redis.server);
+    var publishClient  = redis.createClient(config.redis.port, config.redis.server);
+
+
+    var pingChannel = 'broker_'+process.pid+'_ping';
+
+    setInterval(function () {
+
+        for(var k in uServices) {
+            for (var j = 0; j < uServices[k].length; j++) {
+
+                var msg = msgModule.create('broker', process.pid);
+                msg.respondChannel = pingChannel;
+                msg.request.service = uServices[k][j].channel;
+                msg.request.function = 'ping';
+
+                console.log('ping to %s', uServices[k][j].channel);
+                publishClient.publish(uServices [k][j].channel+'_ping', JSON.stringify(msg));
+            }
+        }
+
+    }, 1000);
+
+    listenClient.on("error", function (err) {
+        console.log("Redis listen " + name + " error " + err);
+    });
+
+    listenClient.on('message', function(channel, message) {
+
+        try {
+            msg = JSON.parse(message);
+            msg = msgModule.verify(msg); // validation of the message
+
+            if (msg.ack == 1 && msg.request.function == 'pong') {
+                // keep the service alive
+
+                for (var k in uServices) {
+
+                    for (var j = 0; j < uServices[k].length; j++) {
+
+                        if (uServices[k][j].channel == msg.request.service) {
+
+                            uServices[k][j].timestamp = (new Date()).getTime();
+
+                            client.set('uServices', JSON.stringify(uServices));
+                            // Publish that it did an update
+                            publishClient.publish('uServicesChannel', 'UPDATE');
+                            console.log('have a pong from %s!', msg.request.service);
+
+                        }
+                    }
+                }
+            }
+
+        } catch (e) {
+            console.log(e);
+            console.log("Message is not a valid json");
+        }
+
+    });
+
+    listenClient.subscribe(pingChannel);
+
+    //TODO if timestamp is too old the service is dead
+    setInterval(function () {
+        //get the key of a json
+
+        var change = false;
+
+        for (var k in uServices) {
+            var servicesAlive = [];
+
+            for (var j = 0; j < uServices[k].length; j++) {
+
+                var now = (new Date()).getTime();
+
+                //console.log(( now - uServices[k][j].timestamp ));
+
+                if (( now - uServices[k][j].timestamp ) < 3000) {
+                    servicesAlive.push(uServices[k][j]);
+                    change = true;
+                }
+            }
+            uServices[k] = servicesAlive;
+        }
+
+        if (change == true) {
+            //// Publish that it did an update
+            client.set('uServices', JSON.stringify(uServices));
+            publishClient.publish('uServicesChannel', 'UPDATE');
+            //console.log('uServices UPDATE ', uServices);
+        }
+
+    }, 3000);
+
 }
 
 /**********************************************************************************************************************/
