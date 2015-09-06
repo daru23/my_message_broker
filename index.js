@@ -1,8 +1,6 @@
 /*
  * index.js
- *
  * Message Broker
- *
  *-----------------------------------------------------
  * Author: Daniela Ruiz
  * Email: daru015@gmail.com
@@ -46,17 +44,19 @@ listenClient.on("message", function (channel, message) {
         msg = JSON.parse(message);
         msg = msgModule.verify(msg); // validation of the message
 
+        // Set broker in the chain
+
+        msg.trackingChain.push({"service" : "broker_"+process.pid, "timestamp": (new Date()).getTime()});
+
         //Asking for a channel
         if (msg.respondChannel === ''){
             //assign channel
             var assignedChannel = msg.serviceID +'_'+ msg.msgpid;
             msg.ack = 1;
             msg.respondChannel = assignedChannel;
-            publishClient.publish('brokerInitChannel', JSON.stringify(msg));
-            client.hset('services', msg.serviceID, 1);
-            client.hset(msg.serviceID, assignedChannel, 1);
-            console.log('new add');
+            console.log('New service has been added %s', msg.serviceID);
             addService(msg.serviceID, {"channel": assignedChannel, "status" : 0}); //TODO a service always start deactivated
+            publishClient.publish('brokerInitChannel', JSON.stringify(msg));
 
         //Sending a message
         } else {
@@ -65,39 +65,18 @@ listenClient.on("message", function (channel, message) {
             // send the message to the service
             //send the message to the brokerChannel as ack=1
             if (msg.request.service !== '' && msg.request.function !== '') {
-                selectService(msg.serviceID);
-                client.hgetall('services', function (error, servicesHash) {
-                    if (error) {
-                        console.log(error);
-                        msg.error.code = 1; //for example this should be defined somewhere
-                        msg.error.message = 'not services available'; //for example this should be defined somewhere
-                        publishClient.publish(msg.respondChannel, JSON.stringify(msg));
-                    } else if (servicesHash !== null) {
-                        var check = false; // to do it just once
-                        for (var service in servicesHash) {
-                            if (service === msg.request.service && check === false) { // look for a service channel
-                                check = true;
-                                client.hgetall(msg.request.service, function (error, serviceReqHash) {
-                                    if (error) {
-                                        console.log(error);
-                                        msg.error.code = 1; //for example this should be defined somewhere
-                                        msg.error.message = 'not service available'; //for example this should be defined somewhere
-                                        publishClient.publish(msg.respondChannel, JSON.stringify(msg));
-                                    } else if (servicesHash !== null) {
-                                        var check2 = false; // to do it just once
-                                        for (var serviceChannel in serviceReqHash) {
-                                            if (serviceReqHash[serviceChannel] === "1" && check2 === false) {
-                                                check2 = true;
-                                                publishClient.publish(serviceChannel, JSON.stringify(msg));
-                                            }
-                                        }
 
-                                    }
-                                });
-                            }
-                        }
-                    }
-                });
+                var serviceAssgined = selectService(msg.request.service);
+
+                if (typeof(serviceAssgined) == 'string') {
+                    console.log(serviceAssgined);
+                    msg.error.code = 2; //for example this should be defined somewhere
+                    msg.error.message = serviceAssgined; //for example this should be defined somewhere
+                    publishClient.publish(msg.respondChannel, JSON.stringify(msg));
+                } else {
+                    publishClient.publish(serviceAssgined.channel, JSON.stringify(msg));
+                }
+
             } else {
                 console.log('Request: service and function are not set');
                 msg.error.code = 1; //for example this should be defined somewhere
@@ -108,6 +87,7 @@ listenClient.on("message", function (channel, message) {
 
         }
     }catch(e){
+        console.log(e);
         console.log("Message is not a valid json")
     }
 
@@ -131,7 +111,7 @@ function uServicesManager(){
 
         client.get('uServices', function(err, reply) {
             uServices = JSON.parse(reply);
-            console.log('new uServices', uServices);
+            console.log('uServices UPDATE ', uServices);
         });
 
     });
@@ -173,13 +153,25 @@ function selectService (service){
         var uService = uServices[service], //array
             activeuService = uService[0];
 
-        console.log(uServices);
-        console.log(service);
-        console.log(activeuService);
-        uService.shift();              //take the service out of the list
-        uService[0].status = 1;        //activate other service
+        // the first service should be active but if is not, should look for an active one
+
+        if (activeuService.status == 0) {
+
+            var foundOne = false;
+
+            for ( var i = 0 ; i < uService.length ; i++ ){
+                if ( foundOne == false && uService[i].status == 1 ) {
+                    activeuService = uService[i];
+                    foundOne = true;
+                }
+            }
+            //if there is not active service just stay whith the first one
+        }
+
         activeuService.status = 0;     //change state to busy
         uService.push(activeuService); // pushing the service at the end of the list
+        uService.shift();              //take the service out of the list
+        uService[0].status = 1;        //activate other service
 
         //save the new uServices
         uServices[service] = uService;
@@ -191,7 +183,7 @@ function selectService (service){
 
         return activeuService;
     } else {
-
+        return "not services with name "+service;
         // return an error cause there are no services with that name
     }
 }

@@ -42,7 +42,7 @@ setTimeout(function () {
         console.log('Answer: %j', answer)
     });
 
-    request = {"service" : "math", "function": "multiply"};
+    request = {"service" : "demo", "function": "multiply"};
     busInit.sendMessage('math', process.pid, data, request, function (answer) {});
 
 

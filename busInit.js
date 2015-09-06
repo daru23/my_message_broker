@@ -38,8 +38,11 @@ var service = {
               msg = JSON.parse(message);
               msg = msgModule.verify(msg); // validation of the message
 
-              if (msg.ack === 1 && msg.serviceID == service) { // a channel have been assign
+              //TODO CATCH the error of the msg
+
+              if (msg.ack === 1 && msg.serviceID == service && pid == msg.msgpid) { // a channel have been assign
                   // Catch redis errors
+                  listenClient.unsubscribe();
                   callback(msg.respondChannel);
                   //callback or logic mthread
               }
@@ -72,7 +75,7 @@ var service = {
               msg = msgModule.verify(msg); // validation of the message
               callback(msg);
           } catch (e) {
-              console.log("Message is not a valid json")
+              console.log("1 Message is not a valid json")
           }
       });
 
