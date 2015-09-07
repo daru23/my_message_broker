@@ -46,9 +46,10 @@ var service = {
         // Create a message using the template
         //  A message always is create with ack = 0 and type NORMAL
         var message = emptyMsg;
+        var buffer = new Buffer(((new Date()).getTime()).toString(), "utf-8");
         message.serviceID = serviceID;
         message.msgpid = pid;
-        message.msgID = (crypto.createHash('sha1').digest('hex')).toString();//crypto.createHash('sha1');
+        message.msgID =  ((crypto.createHash('sha1').update(buffer)).digest('hex')).toString();
         message.timestamp = Math.round((new Date()).getTime() / 1000);
 
         var validation = Joi.validate(message,msgTemplate);

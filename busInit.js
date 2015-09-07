@@ -25,21 +25,17 @@ var service = {
           publishClient = redis.createClient(config.redis.port, config.redis.server);
       // Catch redis errors
       listenClient.on('error', function (error) {
-
           console.log('listenClient error: %s', error)
-
       });
 
       // Catch redis message
       listenClient.on("message", function (channel, message) {
-
           var msg;
           try {
               msg = JSON.parse(message);
               msg = msgModule.verify(msg); // validation of the message
 
               //TODO CATCH the error of the msg
-
               if (msg.ack === 1 && msg.serviceID == service && pid == msg.msgpid) { // a channel have been assign
                   // Catch redis errors
                   listenClient.unsubscribe();
@@ -48,7 +44,7 @@ var service = {
               }
 
           } catch (e){
-              console.log("Message is not a valid json")
+              console.log('Error '+e);
           }
 
       });
@@ -76,8 +72,7 @@ var service = {
               msg = msgModule.verify(msg); // validation of the message
               callback(msg);
           } catch (e) {
-              console.log(e);
-              console.log("Message is not a valid json")
+              console.log('Error '+e);
           }
       });
 
@@ -89,19 +84,14 @@ var service = {
       // Catch redis message
       pingListenClient.on("message", function (channel, message) {
           var msg;
-
-          console.log('pong');
           try {
               msg = JSON.parse(message);
               msg = msgModule.verify(msg); // validation of the message
-
               msg.request.function = 'pong';
               msg.ack = 1;
-
               publishClient.publish(msg.respondChannel, JSON.stringify(msg))
           } catch (e) {
-              console.log(e);
-              console.log("Message is not a valid json")
+              console.log('Error '+e);
           }
       });
 
@@ -110,7 +100,6 @@ var service = {
   },
   sendAnswer : function (message, data) {
       var publishClient = redis.createClient(config.redis.port, config.redis.server);
-
       var answer = {"value" : data};
       var msg = msgModule.setData(message, answer);
 
@@ -128,9 +117,7 @@ var service = {
       publishClient.publish('broker', JSON.stringify(msg));
 
       listenClient.on('error', function (error) {
-
           console.log('listenClient error: %s', error)
-
       });
       // Catch redis message
       listenClient.on("message", function (channel, message) {
@@ -141,7 +128,7 @@ var service = {
               //listenClient.unsubscribe();
               callback(msg.data);
           } catch (e) {
-              console.log("Message is not a valid json")
+              console.log('Error '+e);
           }
       });
 
